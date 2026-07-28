@@ -22,6 +22,9 @@ int main(){
 			lcd_cmd(0x01);
 			lcd_str("Set Mode");
 			lcd_cmd(0xc0);
+			if((hrs>>6)&1)
+			lcd_str("CURRENT:12 Hrs");
+			else
 			lcd_str("CURRENT:24 Hrs");
 			while(1){
 				if(SW1==0){
@@ -70,24 +73,45 @@ void read_rtc(void){
 }
 
 
+
 void lcd_display(void){ 
+			u8 temp,hr;
 			lcd_cmd(0x80);
 			lcd_cmd(0x0F);
-			if(mode==1){// Position after time
-				am_pm=(hrs>>5)&1;
-				lcd_data(((hrs&0x1F)>>4)+48);
-				lcd_data((hrs&0x0F)+48);
-				lcd_data(':');
-				
-				lcd_cmd(0x8D);
-				if(am_pm)
-						lcd_str("PM");
-				else
-						lcd_str("AM");
-			}else{
+			if(mode==0){// Position after time
 				lcd_data((hrs/16)+48);
 				lcd_data((hrs%16)+48);
 				lcd_data(':');
+			}else{
+				if((hrs>>6)&1){
+					temp=((hrs>>5)&1);
+					hr=bcd_dec(hrs&0x1F);
+				}else{
+					hr=bcd_dec(hrs&0x3F);
+					
+					if(hr==0){
+                hr=12;
+                temp=0;
+            }else if(hr<12){
+                temp=0;
+            }else if(hr==12){
+                temp=1;
+            }else{
+                hr-=12;
+                temp=1;
+            }
+				}
+				lcd_data(hr/10+48);
+        lcd_data(hr%10+48);
+        lcd_data(':');
+
+        lcd_cmd(0x8D);
+
+        if(temp)
+            lcd_str("PM");
+        else
+            lcd_str("AM");
+			
 			}
 		
 		lcd_cmd(0x83);			
@@ -118,8 +142,7 @@ void lcd_display(void){
 
 
 
-void mode12(void)
-{
+void mode12(void){
 		lcd_display();
     sec=i2c_read(0xD1,0x00);
     min=i2c_read(0xD1,0x01);
@@ -129,23 +152,28 @@ void mode12(void)
 	
 	
 			///convert to dec
-		hrs=bcd_dec(hrs & 0x3F);
+		if((hrs>>6)&1){
+			am_pm=((hrs>>5)&1);
+			hrs=bcd_dec(hrs&0x1F);
+		}else{
+			 hrs=bcd_dec(hrs&0x3F);
+			 if(hrs==0){
+					hrs=12;
+					am_pm=0;
+			}else if(hrs<12){
+					am_pm=0;
+			}else if(hrs==12){
+					am_pm=1;
+			}else{
+					hrs-=12;
+					am_pm=1;
+			}
+		}
+		
 		min=bcd_dec(min);
 		sec=bcd_dec(sec);
 		dd=bcd_dec(dd);
 		dw=bcd_dec(dw);
-		
-		if(hrs==0){
-			hrs=12;
-			am_pm=0;
-		}else if(hrs<12){
-			am_pm=0;
-		}else if(hrs==12){
-			am_pm=1;
-		}else{
-			hrs=hrs-12;
-			am_pm=1;
-		}
 		
 		lcd_cmd(0x80);
 		lcd_data(hrs/10+48);
@@ -180,9 +208,9 @@ void mode12(void)
 			    }
 					
 					if(hrs>=12 && am_pm==1){
-						dd++;
-						dw++;
-						am_pm=!am_pm;
+							dd++;
+							dw++;
+							am_pm=!am_pm;
 					}
 							
 				lcd_cmd(0x80);
@@ -315,12 +343,28 @@ void mode12(void)
 }
 
 void mode24(){
-		read_rtc();
+				read_rtc();
 				lcd_cmd(0x01);
 				lcd_display();
-				hrs=bcd_dec(hrs);
 				dd=bcd_dec(dd);
 				dw=bcd_dec(dw);
+				min=bcd_dec(min);	
+	
+				if(hrs&(1<<6)){
+						am_pm=(hrs>>5)&1;
+						hrs=bcd_dec(hrs&0x1F);
+
+						if(am_pm){
+								if(hrs!=12)
+										hrs+=12;
+						}else{
+								if(hrs==12)
+										hrs=0;
+						}
+				}else{
+						hrs=bcd_dec(hrs&0x3F);
+				}
+	
 				while(1){
 						lcd_cmd(0x80);
 						lcd_cmd(0x0F);
@@ -350,7 +394,7 @@ void mode24(){
 					}
 				
 					////MIN/////
-			min=bcd_dec(min);	
+		
 			while(1){
 			    lcd_cmd(0x83);
 			    lcd_cmd(0x0F);
@@ -426,16 +470,21 @@ void mode24(){
 			    }
 					if(SW2==0){
 			        while(SW2==0);
-			        hrs=dec_bcd(hrs);
+			      //  hrs=dec_bcd(hrs);
 			        min=dec_bcd(min);
 			        sec=dec_bcd(sec);
 							dd=dec_bcd(dd);
 							dw=dec_bcd(dw);
 			        i2c_write(0xD0,0,sec);
 			        i2c_write(0xD0,1,min);
-			        i2c_write(0xD0,2,hrs);
+			       // i2c_write(0xD0,2,hrs);
 							i2c_write(0xD0,4,dd);
 							i2c_write(0xD0,3,dw);
+							hrs=dec_bcd(hrs);
+							hrs&=~(1<<6);      //24-hour mode
+							hrs&=~(1<<5);      //PM bit cleared
+
+							i2c_write(0xD0,2,hrs);
 						break;
 			    }
 			}
