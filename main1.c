@@ -404,14 +404,14 @@ void mode24(){
 			        if(min>59){
 			            min=0;
 			            hrs++;
-									if(hrs>23){
-										hrs=0;
-										dd++;
-										dw++;
-										if(dw>7)
-											dw=1;
-									}
-			        }
+						if(hrs>23){
+							hrs=0;
+							dd++;
+							dw++;
+							if(dw>7)
+							dw=1;
+						}
+		        }
 								lcd_cmd(0x80);
 								lcd_data(hrs/10+48);
             		lcd_data((hrs%10)+48);
@@ -449,9 +449,9 @@ void mode24(){
 			                if(hrs>23){
 			                    hrs=0;
 			                    dd++;
-													dw++;
-													if(dw>7)
-														dw=1;
+								dw++;
+								if(dw>7)
+								dw=1;
 			                }
 			            }
 			        }
