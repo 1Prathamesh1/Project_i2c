@@ -34,15 +34,8 @@ int main(){
 					hrs++;
 					c=hrs;
 					if(mode==1){
-						if(hrs>12){
-							if(hrs==12){
-								hrs=1;
-								am_pm=!am_pm;
-							}else{
-								hrs=1;
-							}
-							am_pm=!am_pm;
-						}
+						if(hrs>12)
+							hrs=1;	
 					}else{
 							if(hrs>23)
 							hrs=0;
@@ -63,6 +56,8 @@ int main(){
 					while(SW1==0);
 					delay_ms(50);
 					min++;
+					if(min>59)
+						min=0;
 					lcd_display();
 				}//endsw1
 				if(SW2==0){
@@ -211,13 +206,13 @@ void convert_dec(){
 	min=bcd_dec(min);
 	hr_reg = hrs;          
 
-  if(hr_reg&(1<<6)){
+  if(hr_reg&(1<<6)){//12 hrs mode
 		mode=1;
     am_pm=(hr_reg>>5)&1;
-    hrs=bcd_dec(hr_reg & 0x1F);
-  }else{
+    hrs=bcd_dec(hr_reg&0x1F);
+  }else{//24 hrs mode
 		mode=0;
-    hrs=bcd_dec(hr_reg & 0x3F);
+    hrs=bcd_dec(hr_reg&0x3F);
   }
 	dw=bcd_dec(dw);
 	dd=bcd_dec(dd);
@@ -228,7 +223,6 @@ void convert_dec(){
 void lcd_display(){
 	//lcd_cmd(0x01);
 	lcd_cmd(0x80);
-	
 	lcd_data(hrs/10+48);
 	lcd_data(hrs%10+48);
 	lcd_data(':');
